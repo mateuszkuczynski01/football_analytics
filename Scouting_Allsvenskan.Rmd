@@ -1,0 +1,134 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(tidyverse)
+library(readxl)
+
+setwd("D:\\SoccerAnalytics\\Data")
+MLS_players <- read_xlsx("WyScoutMLS_copy.xlsx")
+head(MLS_players)
+MLS_players <- as.data.frame(MLS_players)
+
+colnames(MLS_players)
+
+```
+
+```{r}
+
+GA_ersatz_model <- lm(`Goals Added` ~ . -`xA` -`Matches played` -`Goals` -`xG` -`Assists`
+                      -`Penalties taken` -`Penalty conversion, %`
+                      -`Direct free kicks per 90` -`Free kicks per 90` -`Goals per 90` 
+                      -`Non-penalty goals`  
+                      -`Age`
+                      -`Minutes played`
+                      ,data = select(MLS_players, -Player, -Team, -`Team within selected timeframe`,                                          -`Foot`, -`Height`, -`Weight`, -`Market value`, -`Passport country`, -`Birth country`, -`On loan`, -`Position`, -`Contract expires`)
+)
+
+summary(GA_ersatz_model)
+
+```
+
+```{r}
+
+Allsvenskan <- read_xlsx("Swedish_Allsvenskan_21.xlsx")
+predicted_GA_Allsvenskan <- predict(GA_ersatz_model, Allsvenskan)
+
+Allsvenskan$predicted_GA <- predicted_GA_Allsvenskan
+
+```
+
+```{r}
+Ekstraklasa <- read_xlsx("WyScoutEkstraklasa2122.xlsx")
+
+Predicted.GA.ESA <- predict(GA_ersatz_model, Ekstraklasa)
+Ekstraklasa$predicted_GA <- Predicted.GA.ESA
+```
+
+```{r}
+
+data <- Allsvenskan %>% rbind(filter(Ekstraklasa, `Team within selected timeframe`==
+                                       "Pogoń Szczecin"
+                                     )) %>%   filter(`Minutes played`>500 & Age<=31) %>%
+  select(Player,
+                        Position,
+                        
+                       `Contract expires`,
+                        `Progressive passes per 90`,
+                     
+                       `Progressive runs per 90`,
+                       `Duels won, %`,
+                       `Progressive passes per 90`,
+                         predicted_GA, 
+                       `Team within selected timeframe`) 
+
+  
+
+str(data)
+data
+
+```
+
+```{r}
+
+var(data$`Duels won, %`)
+library(Amelia)
+missmap(data)
+```
+
+```{r}
+
+
+data[,4:7] <- scale(data[,4:7])
+
+data %>% filter(!Position %in% c("LB", "RCB","LCB","CB","RB","LCB, RCB","RB, LB",
+                                 "LB, LWB", "RB, RWB")) %>% mutate(Mroczek_Podpisuj = `Progressive runs per 90`+
+                  `Duels won, %` + `Progressive passes per 90` +
+                   `predicted_GA` ) %>%
+  arrange(desc(`Progressive runs per 90`)) %>% as.data.frame()
+
+```
+
+```{r}
+
+data[,4:7] <- scale(data[,4:7])
+
+plot <- data %>% 
+  filter(`Progressive passes per 90`> 1 & `Duels won, %` ) %>% 
+  ggplot(aes(x=`Progressive passes per 90`, y=`Duels won, %`)) + geom_point() + geom_text(aes(label=Player), color="gray20", size=3.5, hjust="inward", vjust="inward", check_overlap = F) + theme_bw() 
+
+plot
+
+```
+
+
+
+
+```{r}
+
+data %>% filter(`Team within selected timeframe`==
+                                       "Pogoń Szczecin"
+                                     ) %>%   
+  select(Player,
+                        Position,
+                        
+                       `Contract expires`,
+                        `Progressive passes per 90`,
+                     
+                       `Progressive runs per 90`,
+                       `Duels won, %`,
+                       `Progressive passes per 90`,
+                         predicted_GA, 
+                       `Team within selected timeframe`) %>%
+  arrange(desc(`Progressive runs per 90`))
+
+
+```
+

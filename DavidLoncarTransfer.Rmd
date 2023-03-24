@@ -1,0 +1,138 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse, quietly = T)
+library(readxl, quietly = T)
+```
+
+```{r}
+setwd("D:\\SoccerAnalytics\\Data")
+MLS_players <- read_xlsx("WyScoutMLS_copy.xlsx")
+head(MLS_players)
+MLS_players <- as.data.frame(MLS_players)
+```
+
+
+```{r}
+colnames(MLS_players)
+GA_ersatz_model <- lm(`Goals Added` ~ . -`xA` -`Matches played` -`Goals` -`xG` -`Assists`
+                      -`Penalties taken` -`Penalty conversion, %`
+                      -`Direct free kicks per 90` -`Free kicks per 90` -`Goals per 90` 
+                      -`Non-penalty goals`  
+                      -`Age`
+                       -`Minutes played`
+                      ,data = select(MLS_players, -Player, -Team, -`Team within selected timeframe`,                                          -`Foot`, -`Height`, -`Weight`, -`Market value`, -`Passport country`, -`Birth country`, -`On loan`, -`Position`, -`Contract expires`)
+)
+
+summary(GA_ersatz_model)
+```
+
+```{r}
+setwd("D:\\SoccerAnalytics\\Data")
+Ekstraklasa <- read_xlsx("WyScoutEkstraklasa2122.xlsx")
+head(Ekstraklasa)
+colnames(MLS_players)==colnames(Ekstraklasa)
+
+Predicted.GA.ESA <- predict(GA_ersatz_model, Ekstraklasa)
+Ekstraklasa$Predicted_GA <- Predicted.GA.ESA
+```
+
+```{r}
+select(Ekstraklasa, Player, Predicted_GA, `Team within selected timeframe`) %>% arrange(desc(Predicted_GA))
+```
+
+```{r}
+
+HNL <- read_xlsx("Croatian_1.HNL_2122.xlsx")
+
+
+Predicted.GA.HNL <- predict(GA_ersatz_model, HNL)
+HNL$Predicted_GA <- Predicted.GA.HNL
+```
+
+```{r}
+select(HNL, Player, Predicted_GA, `Team within selected timeframe`) %>% filter(`Team within selected timeframe`=="Osijek") %>% arrange(desc(Predicted_GA))
+```
+```{r}
+
+data <- HNL %>% 
+  select(Player,
+                        Position,
+                        
+                       `Contract expires`,
+                        `Progressive passes per 90`,
+                     
+                       `Progressive runs per 90`,
+                       `Duels won, %`,
+                       `Progressive passes per 90`,
+                         Predicted_GA, 
+                       `Team within selected timeframe`,
+         `Accurate forward passes, %`) 
+
+  
+data[,4:7] <- scale(data[,4:7])
+
+data %>% filter(grepl("CB", Position)) %>%  ggplot(aes(x=`Progressive passes per 90`, y=`Accurate forward passes, %`)) + geom_point() + geom_text(aes(label=Player), color="gray20", size=3, hjust="outward", vjust="outward", check_overlap = F) + theme_bw() 
+
+```
+
+
+
+```{r}
+
+data2 <- Ekstraklasa %>% 
+  select(Player,
+                        Position,
+                        
+                       `Contract expires`,
+                        `Progressive passes per 90`,
+                     
+                       `Progressive runs per 90`,
+                       `Duels won, %`,
+                       `Progressive passes per 90`,
+                         Predicted_GA, 
+                       `Team within selected timeframe`,
+         `Accurate forward passes, %`) 
+
+  
+data2[,4:7] <- scale(data2[,4:7])
+
+data2 %>% filter(grepl("CB", Position)) %>%  ggplot(aes(x=`Progressive passes per 90`, y=`Accurate forward passes, %`)) + geom_point() + geom_text(aes(label=Player), color="gray20", size=3, hjust="outward", vjust="outward", check_overlap = F) + theme_bw() 
+
+```
+```{r}
+joiner2 <- Ekstraklasa %>% filter(grepl("CB", Position), 
+                       `Team within selected timeframe`=="Pogoń Szczecin")
+
+HNLPogon <- rbind(HNL, joiner2)
+```
+
+```{r}
+
+data3 <- HNLPogon %>% 
+  select(Player,
+                        Position,
+                        
+                       `Contract expires`,
+                        `Progressive passes per 90`,
+                     
+                       `Progressive runs per 90`,
+                       `Duels won, %`,
+                       `Progressive passes per 90`,
+                         Predicted_GA, 
+                       `Team within selected timeframe`,
+         `Accurate forward passes, %`) 
+
+  
+data3[,4:7] <- scale(data3[,4:7])
+
+data3 %>% filter(grepl("CB", Position)) %>%  ggplot(aes(x=`Progressive passes per 90`, y=`Duels won, %`)) + geom_point() + geom_text(aes(label=Player), color="gray20", size=3, hjust="outward", vjust="outward", check_overlap = F) + theme_bw() 
+
+```

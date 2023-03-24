@@ -1,0 +1,96 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(tidyverse, quietly = T)
+library(readxl, quietly = T)
+
+```
+
+```{r}
+setwd("D:\\SoccerAnalytics\\Data")
+MLS_players <- read_xlsx("WyScoutMLS_copy.xlsx")
+head(MLS_players)
+MLS_players <- as.data.frame(MLS_players)
+```
+
+
+
+
+```{r}
+colnames(MLS_players)
+GA_ersatz_model <- lm(`Goals Added` ~ . -`xA` -`Matches played` -`Goals` -`xG` -`Assists`
+                      -`Penalties taken` -`Penalty conversion, %`
+                      -`Direct free kicks per 90` -`Free kicks per 90` -`Goals per 90` 
+                      -`Non-penalty goals`  
+                      -`Age`
+                       -`Minutes played`
+                      ,data = select(MLS_players, -Player, -Team, -`Team within selected timeframe`,                                          -`Foot`, -`Height`, -`Weight`, -`Market value`, -`Passport country`, -`Birth country`, -`On loan`, -`Position`, -`Contract expires`)
+)
+
+summary(GA_ersatz_model)
+```
+
+```{r}
+setwd("D:\\SoccerAnalytics\\Data")
+
+Ekstraklasa <- read_xlsx("WyScoutEkstraklasa2122.xlsx")
+head(Ekstraklasa)
+colnames(MLS_players)==colnames(Ekstraklasa)
+
+Predicted.GA.ESA <- predict(GA_ersatz_model, Ekstraklasa)
+Ekstraklasa$Predicted_GA <- Predicted.GA.ESA
+```
+
+```{r}
+select(Ekstraklasa, Player, Predicted_GA, `Team within selected timeframe`) %>% arrange(desc(Predicted_GA))
+```
+
+
+```{r}
+library(ggplot2)
+Ekstraklasa %>% filter(`Predicted_GA`>0.5) %>%
+  ggplot(aes(x=`Predicted_GA`, y=`Market value`)) + geom_point() + geom_text(aes(label=Player), color="gray20", size=3.5, check_overlap = T) + theme_bw()
+```
+
+```{r}
+library(ggthemes)
+ggplot(Undervalued_Players, aes(x=Predicted_GA, y=Value_Index)) + geom_point() + geom_text(aes(label=Player), color="gray20", size=3.5, check_overlap = T) + theme_bw()
+```
+
+
+```{r}
+
+data <- Ekstraklasa %>% 
+  select(Player,
+                        Position,
+                        
+                       `Contract expires`,
+                        `Progressive passes per 90`,
+                     
+                       `Progressive runs per 90`,
+                       `Duels won, %`,
+                       `Progressive passes per 90`,
+                         Predicted_GA, 
+                       `Team within selected timeframe`) 
+
+  
+data[,4:7] <- scale(data[,4:7])
+
+data %>% filter(`Progressive runs per 90`> 1 & `Duels won, %` ) %>%  ggplot(aes(x=`Progressive runs per 90`, y=`Duels won, %`)) + geom_point() + geom_text(aes(label=Player), color="gray20", size=3.5, hjust="outward", vjust="outward", check_overlap = F) + theme_bw() 
+
+```
+
+
+
+
+
+
+
